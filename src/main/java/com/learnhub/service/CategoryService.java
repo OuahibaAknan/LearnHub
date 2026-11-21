@@ -1,5 +1,7 @@
 package com.learnhub.service;
 
+import com.learnhub.dto.CategoryRequest;
+import com.learnhub.dto.CategoryResponse;
 import com.learnhub.entity.Category;
 import com.learnhub.exception.DuplicateResourceException;
 import com.learnhub.exception.ResourceNotFoundException;
@@ -16,31 +18,41 @@ public class CategoryService {
         this.repository = repository;
     }
 
-    public List<Category> findAll() {
-        return repository.findAll();
+    public List<CategoryResponse> findAll() {
+        return repository.findAll().stream()
+            .map(CategoryResponse::from)
+            .toList();
     }
 
-    public Category findById(Long id) {
-        return repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable avec id : " + id));
+    public CategoryResponse findById(Long id) {
+        return CategoryResponse.from(getEntity(id));
     }
 
-    public Category create(Category category) {
-        if (repository.existsByName(category.getName())) {
-            throw new DuplicateResourceException("Catégorie déjà existante : " + category.getName());
+    public CategoryResponse create(CategoryRequest request) {
+        if (repository.existsByName(request.name())) {
+            throw new DuplicateResourceException("Catégorie déjà existante : " + request.name());
         }
-        return repository.save(category);
+        Category category = new Category(request.name(), request.description());
+        return CategoryResponse.from(repository.save(category));
     }
 
-    public Category update(Long id, Category updated) {
-        Category existing = findById(id);
-        existing.setName(updated.getName());
-        existing.setDescription(updated.getDescription());
-        return repository.save(existing);
+    public CategoryResponse update(Long id, CategoryRequest request) {
+        Category existing = getEntity(id);
+        if (!existing.getName().equals(request.name()) && repository.existsByName(request.name())) {
+            throw new DuplicateResourceException("Catégorie déjà existante : " + request.name());
+        }
+        existing.setName(request.name());
+        existing.setDescription(request.description());
+        return CategoryResponse.from(repository.save(existing));
     }
 
     public void delete(Long id) {
-        findById(id);
+        getEntity(id);
         repository.deleteById(id);
+    }
+
+    private Category getEntity(Long id) {
+        return repository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable avec id : " + id));
     }
 }

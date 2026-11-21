@@ -1,5 +1,7 @@
 package com.learnhub.service;
 
+import com.learnhub.dto.CategoryRequest;
+import com.learnhub.dto.CategoryResponse;
 import com.learnhub.entity.Category;
 import com.learnhub.exception.DuplicateResourceException;
 import com.learnhub.exception.ResourceNotFoundException;
@@ -30,32 +32,27 @@ class CategoryServiceTest {
     private CategoryService service;
 
     private Category buildCategory(String name, String description) {
-        Category category = new Category();
-        category.setName(name);
-        category.setDescription(description);
-        return category;
+        return new Category(name, description);
     }
 
     @Test
     void findAll_retourneToutesLesCategories() {
-        List<Category> categories = List.of(
+        when(repository.findAll()).thenReturn(List.of(
                 buildCategory("Informatique", "Cours IT"),
-                buildCategory("Langues", "Cours de langues"));
-        when(repository.findAll()).thenReturn(categories);
+                buildCategory("Langues", "Cours de langues")));
 
-        List<Category> result = service.findAll();
+        List<CategoryResponse> result = service.findAll();
 
         assertEquals(2, result.size());
     }
 
     @Test
     void findById_categorieExistante_laRetourne() {
-        Category category = buildCategory("Informatique", "Cours IT");
-        when(repository.findById(1L)).thenReturn(Optional.of(category));
+        when(repository.findById(1L)).thenReturn(Optional.of(buildCategory("Informatique", "Cours IT")));
 
-        Category result = service.findById(1L);
+        CategoryResponse result = service.findById(1L);
 
-        assertEquals("Informatique", result.getName());
+        assertEquals("Informatique", result.name());
     }
 
     @Test
@@ -67,36 +64,48 @@ class CategoryServiceTest {
 
     @Test
     void create_nomLibre_enregistreLaCategorie() {
-        Category category = buildCategory("Informatique", "Cours IT");
+        CategoryRequest request = new CategoryRequest("Informatique", "Cours IT");
         when(repository.existsByName("Informatique")).thenReturn(false);
-        when(repository.save(any(Category.class))).thenReturn(category);
+        when(repository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Category result = service.create(category);
+        CategoryResponse result = service.create(request);
 
-        assertEquals("Informatique", result.getName());
-        verify(repository).save(category);
+        assertEquals("Informatique", result.name());
+        verify(repository).save(any(Category.class));
     }
 
     @Test
     void create_nomDejaExistant_lanceDuplicateResourceException() {
-        Category category = buildCategory("Informatique", "Cours IT");
+        CategoryRequest request = new CategoryRequest("Informatique", "Cours IT");
         when(repository.existsByName("Informatique")).thenReturn(true);
 
-        assertThrows(DuplicateResourceException.class, () -> service.create(category));
+        assertThrows(DuplicateResourceException.class, () -> service.create(request));
         verify(repository, never()).save(any(Category.class));
     }
 
     @Test
     void update_categorieExistante_metAJourLesChamps() {
         Category existing = buildCategory("Ancien nom", "Ancienne description");
-        Category updated = buildCategory("Nouveau nom", "Nouvelle description");
+        CategoryRequest request = new CategoryRequest("Nouveau nom", "Nouvelle description");
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.existsByName("Nouveau nom")).thenReturn(false);
         when(repository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Category result = service.update(1L, updated);
+        CategoryResponse result = service.update(1L, request);
 
-        assertEquals("Nouveau nom", result.getName());
-        assertEquals("Nouvelle description", result.getDescription());
+        assertEquals("Nouveau nom", result.name());
+        assertEquals("Nouvelle description", result.description());
+    }
+
+    @Test
+    void update_nomDejaUtilise_lanceDuplicateResourceException() {
+        Category existing = buildCategory("Ancien nom", "Description");
+        CategoryRequest request = new CategoryRequest("Nom pris", "Description");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.existsByName("Nom pris")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> service.update(1L, request));
+        verify(repository, never()).save(any(Category.class));
     }
 
     @Test
@@ -104,7 +113,7 @@ class CategoryServiceTest {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> service.update(99L, buildCategory("Nom", "Description")));
+                () -> service.update(99L, new CategoryRequest("Nom", "Description")));
         verify(repository, never()).save(any(Category.class));
     }
 
