@@ -1,6 +1,7 @@
 package com.learnhub.controller;
 
-import com.learnhub.entity.Category;
+import com.learnhub.dto.CategoryRequest;
+import com.learnhub.dto.CategoryResponse;
 import com.learnhub.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,23 +21,23 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<Category> getAll() {
+    public List<CategoryResponse> getAll() {
         return service.findAll();
     }
 
     @GetMapping("/{id}")
-    public Category getById(@PathVariable Long id) {
+    public CategoryResponse getById(@PathVariable Long id) {
         return service.findById(id);
     }
 
     @PostMapping
-    public ResponseEntity<Category> create(@Valid @RequestBody Category category) {
-        return new ResponseEntity<>(service.create(category), HttpStatus.CREATED);
+    public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
+        return new ResponseEntity<>(service.create(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public Category update(@PathVariable Long id, @Valid @RequestBody Category category) {
-        return service.update(id, category);
+    public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
+        return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
