@@ -1,6 +1,8 @@
 package com.learnhub.service;
 
 import com.learnhub.entity.Category;
+import com.learnhub.exception.DuplicateResourceException;
+import com.learnhub.exception.ResourceNotFoundException;
 import com.learnhub.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -20,12 +22,12 @@ public class CategoryService {
 
     public Category findById(Long id) {
         return repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Catégorie introuvable avec id : " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable avec id : " + id));
     }
 
     public Category create(Category category) {
         if (repository.existsByName(category.getName())) {
-            throw new RuntimeException("Catégorie déjà existante : " + category.getName());
+            throw new DuplicateResourceException("Catégorie déjà existante : " + category.getName());
         }
         return repository.save(category);
     }
